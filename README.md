@@ -23,30 +23,30 @@ Built as an exploration of hybrid retrieval, graph-based note connectivity, and 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        Ingest Pipeline                       │
+│                        Ingest Pipeline                      │
 │                                                             │
-│  Apple Notes ──► AppleScript export ──► SHA256 diff        │
+│  Apple Notes ──► AppleScript export ──► SHA256 diff         │
 │       │                                      │              │
 │       ▼                                      ▼              │
 │  HTML ──► Markdown    (changed notes only)                  │
 │       │                                                     │
-│       ├──► OCR (Vision framework, image-only notes)        │
-│       ├──► Chunk  (heading-aware, 50–500 tokens)           │
-│       ├──► Embed  (all-MiniLM-L6-v2 → LanceDB)            │
+│       ├──► OCR (Vision framework, image-only notes)         │
+│       ├──► Chunk  (heading-aware, 50–500 tokens)            │
+│       ├──► Embed  (all-MiniLM-L6-v2 → LanceDB)              │
 │       └──► Graph  (pairwise cosine similarity, incremental) │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
-│                       Query Pipeline                         │
+│                       Query Pipeline                        │
 │                                                             │
 │  Query ──► BM25 search ──┐                                  │
-│        └──► Embed + ANN ──┴──► RRF fusion ──► Graph expand │
+│        └──► Embed + ANN ──┴──► RRF fusion ──► Graph expand  │
 │                                                    │        │
 │                                                    ▼        │
 │                              Claude Haiku / Ollama (local)  │
 │                                         │                   │
 │                                         ▼                   │
-│                              Grounded answer + citations     │
+│                              Grounded answer + citations    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
