@@ -20,13 +20,13 @@ import re
 import sys
 from pathlib import Path
 
-AGENT_DIR   = Path(__file__).parent
-NOTES_DIR   = AGENT_DIR / "notes_md"
-INDEX_FILE  = NOTES_DIR / "_index.json"
+AGENT_DIR = Path(__file__).parent
+NOTES_DIR = AGENT_DIR / "notes_md"
+INDEX_FILE = NOTES_DIR / "_index.json"
 CHUNKS_FILE = AGENT_DIR / "chunks.jsonl"
 
-MIN_TOKENS  = 50
-MAX_TOKENS  = 500
+MIN_TOKENS = 50
+MAX_TOKENS = 500
 TARGET_TOKENS = 300
 
 
@@ -88,7 +88,9 @@ def merge_small(chunks: list[str]) -> list[str]:
     return merged
 
 
-def chunk_note(note_id: str, title: str, source_path: str, modified_at: int = None) -> list[dict]:
+def chunk_note(
+    note_id: str, title: str, source_path: str, modified_at: int = None
+) -> list[dict]:
     path = Path(source_path)
     if not path.exists():
         return []
@@ -106,7 +108,9 @@ def chunk_note(note_id: str, title: str, source_path: str, modified_at: int = No
         return []
 
     # 1. Split on headings
-    sections = split_by_headings(body) if "\n## " in body or "\n### " in body else [body]
+    sections = (
+        split_by_headings(body) if "\n## " in body or "\n### " in body else [body]
+    )
 
     # 2. Recursively split oversized sections
     raw_chunks = []
@@ -125,16 +129,18 @@ def chunk_note(note_id: str, title: str, source_path: str, modified_at: int = No
     records = []
     for i, text in enumerate(final_chunks):
         full_text = f"{header}\n\n{text}"
-        records.append({
-            "note_id":      note_id,
-            "title":        title,
-            "modified_at":  int(modified_at or 0),
-            "source_path":  source_path,
-            "chunk_index":  i,
-            "chunk_total":  len(final_chunks),
-            "tokens_approx": approx_tokens(full_text),
-            "text":         full_text,
-        })
+        records.append(
+            {
+                "note_id": note_id,
+                "title": title,
+                "modified_at": int(modified_at or 0),
+                "source_path": source_path,
+                "chunk_index": i,
+                "chunk_total": len(final_chunks),
+                "tokens_approx": approx_tokens(full_text),
+                "text": full_text,
+            }
+        )
 
     return records
 
@@ -169,7 +175,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--changed", nargs="*", help="Note IDs to re-chunk")
     parser.add_argument("--deleted", nargs="*", help="Note IDs to remove")
-    parser.add_argument("--all",     action="store_true", help="Re-chunk all notes")
+    parser.add_argument("--all", action="store_true", help="Re-chunk all notes")
     args = parser.parse_args()
 
     if not INDEX_FILE.exists():
@@ -202,7 +208,9 @@ def main():
         if note_id not in by_id:
             continue
         entry = by_id[note_id]
-        chunks = chunk_note(note_id, entry["title"], entry["path"], entry.get("modified_at"))
+        chunks = chunk_note(
+            note_id, entry["title"], entry["path"], entry.get("modified_at")
+        )
         if chunks:
             by_note[note_id] = chunks
             total_chunks += len(chunks)

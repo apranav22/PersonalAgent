@@ -44,7 +44,7 @@ from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
-AGENT_DIR  = Path(__file__).parent
+AGENT_DIR = Path(__file__).parent
 INDEX_FILE = AGENT_DIR / "notes_md" / "_index.json"
 
 # Make sure sibling modules (retrieve.py, etc.) are importable
@@ -126,19 +126,19 @@ def search_notes(query: str, top_k: int = 6) -> str:
 
     for i, (chunk, score) in enumerate(results, 1):
         note_id = chunk["note_id"]
-        title   = chunk["title"]
-        text    = chunk["text"]
+        title = chunk["title"]
+        text = chunk["text"]
         preview = text[:600] + ("..." if len(text) > 600 else "")
         seen_ids.add(note_id)
         parts.append(
             f"[{i}] {title}\n"
-            f"    id={note_id}  chunk {chunk['chunk_index']+1}/{chunk['chunk_total']}"
+            f"    id={note_id}  chunk {chunk['chunk_index'] + 1}/{chunk['chunk_total']}"
             f"  score={score:.4f}\n\n"
             f"{preview}"
         )
 
     footer = (
-        f"\n\n{'─'*60}\n"
+        f"\n\n{'─' * 60}\n"
         f"Unique notes: {', '.join(sorted(seen_ids))}\n"
         f"Call get_note(note_id) to read any note in full."
     )
@@ -161,19 +161,21 @@ def get_note(note_id: str) -> str:
     by_id = {e["id"]: e for e in index}
 
     if note_id not in by_id:
-        return f"No note found with ID '{note_id}'. Use browse_notes() to list valid IDs."
+        return (
+            f"No note found with ID '{note_id}'. Use browse_notes() to list valid IDs."
+        )
 
     entry = by_id[note_id]
-    path  = Path(entry.get("path", ""))
+    path = Path(entry.get("path", ""))
 
     if not path.exists():
         return f"Note '{entry.get('title', note_id)}' is indexed but the file is missing on disk."
 
-    text  = path.read_text(encoding="utf-8", errors="replace")
+    text = path.read_text(encoding="utf-8", errors="replace")
     title = entry.get("title", note_id)
     modified = _fmt_date(entry.get("modified_at"))
 
-    header = f"# {title}\nID: {note_id}  |  Last modified: {modified}\n{'─'*60}\n"
+    header = f"# {title}\nID: {note_id}  |  Last modified: {modified}\n{'─' * 60}\n"
     return header + text
 
 
@@ -197,7 +199,7 @@ def list_recent_notes(limit: int = 20) -> str:
     limit = max(1, min(limit, 50))
 
     with_ts = [e for e in index if e.get("modified_at")]
-    no_ts   = [e for e in index if not e.get("modified_at")]
+    no_ts = [e for e in index if not e.get("modified_at")]
 
     sorted_notes = sorted(with_ts, key=lambda e: e["modified_at"], reverse=True)[:limit]
 
@@ -206,9 +208,9 @@ def list_recent_notes(limit: int = 20) -> str:
 
     lines = []
     for e in sorted_notes:
-        dt    = _fmt_date(e.get("modified_at"))
+        dt = _fmt_date(e.get("modified_at"))
         title = e.get("title", "(untitled)")
-        nid   = e["id"]
+        nid = e["id"]
         lines.append(f"  {dt}  {title:<55}  {nid}")
 
     header = f"Most recent {len(sorted_notes)} notes (of {len(index)} total):\n\n"
@@ -216,7 +218,7 @@ def list_recent_notes(limit: int = 20) -> str:
 
 
 @mcp.tool()
-def browse_notes(filter: str = "") -> str:
+def browse_notes(keyword: str = "") -> str:
     """List all note titles and IDs, optionally filtered by keyword.
 
     Use this when the user wants to:
@@ -226,29 +228,26 @@ def browse_notes(filter: str = "") -> str:
     - Check whether a specific note exists before fetching it
 
     Args:
-        filter: Optional keyword to filter by title (case-insensitive).
-                Leave empty to list all notes.
+        keyword: Optional keyword to filter by title (case-insensitive).
+                 Leave empty to list all notes.
     """
     index = _load_index()
     if not index:
         return "No notes indexed yet. Run trigger_ingest() first."
 
-    if filter:
-        entries = [e for e in index if filter.lower() in e.get("title", "").lower()]
-        label   = f"Notes matching '{filter}'"
+    if keyword:
+        entries = [e for e in index if keyword.lower() in e.get("title", "").lower()]
+        label = f"Notes matching '{keyword}'"
     else:
         entries = index
-        label   = "All notes"
+        label = "All notes"
 
     entries = sorted(entries, key=lambda e: e.get("title", "").lower())
 
     if not entries:
-        return f"No notes matching '{filter}'."
+        return f"No notes matching '{keyword}'."
 
-    lines = [
-        f"  {e['id']:<14}  {e.get('title', '(untitled)')}"
-        for e in entries
-    ]
+    lines = [f"  {e['id']:<14}  {e.get('title', '(untitled)')}" for e in entries]
     header = f"{label} ({len(entries)} total):\n\n"
     return header + "\n".join(lines)
 
@@ -309,7 +308,7 @@ def trigger_ingest() -> str:
             cwd=str(AGENT_DIR),
         )
         output = (result.stdout + result.stderr).strip()
-        tail   = output[-3000:] if len(output) > 3000 else output
+        tail = output[-3000:] if len(output) > 3000 else output
 
         if result.returncode != 0:
             return f"Ingest exited with error (code {result.returncode}):\n\n{tail}"

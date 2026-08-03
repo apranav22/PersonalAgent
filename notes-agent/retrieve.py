@@ -15,22 +15,20 @@ Returns ranked list of chunks with note title, text, and source path.
 
 import json
 import re
-import sys
 import warnings
 from pathlib import Path
-from typing import Optional
 
 warnings.filterwarnings("ignore")
 
-AGENT_DIR   = Path(__file__).parent
+AGENT_DIR = Path(__file__).parent
 CHUNKS_FILE = AGENT_DIR / "chunks.jsonl"
-GRAPH_FILE  = AGENT_DIR / "graph.json"
-DB_DIR      = AGENT_DIR / "lancedb"
-TABLE_NAME  = "notes_chunks"
-MODEL_NAME  = "all-MiniLM-L6-v2"
-RRF_K       = 60
+GRAPH_FILE = AGENT_DIR / "graph.json"
+DB_DIR = AGENT_DIR / "lancedb"
+TABLE_NAME = "notes_chunks"
+MODEL_NAME = "all-MiniLM-L6-v2"
+RRF_K = 60
 
-GRAPH_HOP_DISCOUNT = 0.7   # neighbor scores scaled by this factor
+GRAPH_HOP_DISCOUNT = 0.7  # neighbor scores scaled by this factor
 
 _chunks_cache: list = []
 _chunks_mtime: float = 0.0
@@ -40,11 +38,15 @@ _graph_mtime: float = 0.0
 
 _embed_model = None
 
+_bm25: object = None
+_bm25_mtime: float = 0.0
+
 
 def load_embed_model():
     global _embed_model
     if _embed_model is None:
         from sentence_transformers import SentenceTransformer
+
         _embed_model = SentenceTransformer(MODEL_NAME)
     return _embed_model
 
@@ -99,9 +101,9 @@ def graph_expand(results: list, top_k: int, all_chunks: list) -> list:
 
     # Take top top_k//2 neighbors
     n_expand = max(1, top_k // 2)
-    top_neighbors = sorted(
-        neighbor_scores.items(), key=lambda x: x[1], reverse=True
-    )[:n_expand]
+    top_neighbors = sorted(neighbor_scores.items(), key=lambda x: x[1], reverse=True)[
+        :n_expand
+    ]
 
     expanded = list(results)
     for nnid, score in top_neighbors:
@@ -139,10 +141,22 @@ def tokenize(text: str) -> list:
     return re.findall(r"\w+", text.lower())
 
 
+def _get_bm25(chunks: list):
+    """Return a cached BM25Okapi index, rebuilding only when chunks.jsonl changes."""
+    global _bm25, _bm25_mtime
+    try:
+        mtime = CHUNKS_FILE.stat().st_mtime
+    except FileNotFoundError:
+        mtime = 0.0
+    if _bm25 is None or mtime != _bm25_mtime:
+        from rank_bm25 import BM25Okapi
+        _bm25 = BM25Okapi([tokenize(c["text"]) for c in chunks])
+        _bm25_mtime = mtime
+    return _bm25
+
+
 def bm25_search(query: str, chunks: list, top_k: int) -> list:
-    from rank_bm25 import BM25Okapi
-    corpus = [tokenize(c["text"]) for c in chunks]
-    bm25   = BM25Okapi(corpus)
+    bm25 = _get_bm25(chunks)
     scores = bm25.get_scores(tokenize(query))
     ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
     return [(chunks[i], scores[i]) for i in ranked[:top_k]]
@@ -160,7 +174,7 @@ def semantic_search(query: str, top_k: int) -> list:
                 f"Vector table '{TABLE_NAME}' not found — run embed.py first. ({e})"
             )
         model = load_embed_model()
-        vec   = model.encode(query).tolist()
+        vec = model.encode(query).tolist()
         results = table.search(vec).limit(top_k).to_list()
         return [(r, r.get("_distance", 0)) for r in results]
     except RuntimeError:
@@ -171,12 +185,12 @@ def semantic_search(query: str, top_k: int) -> list:
 
 
 def rrf_fuse(
-    bm25_results:     list,
+    bm25_results: list,
     semantic_results: list,
-    top_k:            int,
+    top_k: int,
 ) -> list:
     scores: dict[str, float] = {}
-    meta:   dict[str, dict]  = {}
+    meta: dict[str, dict] = {}
 
     def chunk_key(chunk: dict) -> str:
         return f"{chunk['note_id']}::{chunk['chunk_index']}"
@@ -184,12 +198,12 @@ def rrf_fuse(
     for rank, (chunk, _) in enumerate(bm25_results):
         key = chunk_key(chunk)
         scores[key] = scores.get(key, 0) + 1 / (RRF_K + rank + 1)
-        meta[key]   = chunk
+        meta[key] = chunk
 
     for rank, (chunk, _) in enumerate(semantic_results):
         key = chunk_key(chunk)
         scores[key] = scores.get(key, 0) + 1 / (RRF_K + rank + 1)
-        meta[key]   = chunk
+        meta[key] = chunk
 
     ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
     return [(meta[k], score) for k, score in ranked[:top_k]]
@@ -202,9 +216,9 @@ def retrieve(query: str, top_k: int = 5, expand_graph: bool = True) -> list:
 
     # Run both searches with 2x candidates so fusion has room to work
     k = top_k * 2
-    bm25_res     = bm25_search(query, chunks, k)
+    bm25_res = bm25_search(query, chunks, k)
     semantic_res = semantic_search(query, k)
-    results      = rrf_fuse(bm25_res, semantic_res, top_k)
+    results = rrf_fuse(bm25_res, semantic_res, top_k)
 
     if expand_graph:
         results = graph_expand(results, top_k, chunks)
@@ -214,8 +228,9 @@ def retrieve(query: str, top_k: int = 5, expand_graph: bool = True) -> list:
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("query",             help="Search query")
+    parser.add_argument("query", help="Search query")
     parser.add_argument("--top-k", type=int, default=5)
     args = parser.parse_args()
 
@@ -225,13 +240,17 @@ def main():
         print("No results.")
         return
 
-    print(f"\nTop {len(results)} results for: \"{args.query}\"\n")
+    print(f'\nTop {len(results)} results for: "{args.query}"\n')
     for i, (chunk, score) in enumerate(results, 1):
-        print(f"{'─'*60}")
-        print(f"[{i}] {chunk['title']}  (chunk {chunk['chunk_index']+1}/{chunk['chunk_total']})")
+        print(f"{'─' * 60}")
+        print(
+            f"[{i}] {chunk['title']}  (chunk {chunk['chunk_index'] + 1}/{chunk['chunk_total']})"
+        )
         print(f"    score={score:.4f}  ~{chunk['tokens_approx']} tokens")
-        print(f"    {chunk['text'][:300].strip()}{'...' if len(chunk['text']) > 300 else ''}")
-    print(f"{'─'*60}")
+        print(
+            f"    {chunk['text'][:300].strip()}{'...' if len(chunk['text']) > 300 else ''}"
+        )
+    print(f"{'─' * 60}")
 
 
 if __name__ == "__main__":

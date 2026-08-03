@@ -11,13 +11,12 @@ then updates in-place:
 """
 
 import json
-import shutil
 from pathlib import Path
 
 from utils import load_manifest as _load_manifest
 
-AGENT_DIR  = Path(__file__).parent
-NOTES_DIR  = AGENT_DIR / "notes_md"
+AGENT_DIR = Path(__file__).parent
+NOTES_DIR = AGENT_DIR / "notes_md"
 INDEX_FILE = NOTES_DIR / "_index.json"
 HASHES_FILE = AGENT_DIR / "_hashes.json"
 CHUNKS_FILE = AGENT_DIR / "chunks.jsonl"
@@ -91,8 +90,10 @@ def main():
         new_id = id_map.get(old_id)
         if new_id:
             entry["id"] = new_id
-    INDEX_FILE.write_text(json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8")
-    print(f"Updated _index.json")
+    INDEX_FILE.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+    print("Updated _index.json")
 
     # 3. Update _hashes.json
     if HASHES_FILE.exists():
@@ -102,7 +103,7 @@ def main():
             new_id = id_map.get(old_id, old_id)
             new_hashes[new_id] = hash_val
         HASHES_FILE.write_text(json.dumps(new_hashes, indent=2), encoding="utf-8")
-        print(f"Updated _hashes.json")
+        print("Updated _hashes.json")
 
     # 4. Update chunks.jsonl
     if CHUNKS_FILE.exists():
@@ -116,7 +117,7 @@ def main():
             chunk["note_id"] = id_map.get(old_id, old_id)
             lines.append(json.dumps(chunk, ensure_ascii=False))
         CHUNKS_FILE.write_text("\n".join(lines) + "\n", encoding="utf-8")
-        print(f"Updated chunks.jsonl")
+        print("Updated chunks.jsonl")
 
     print("\nMigration complete. Run embed.py --all to rebuild vectors with new IDs.")
 

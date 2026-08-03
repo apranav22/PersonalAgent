@@ -64,7 +64,7 @@ Built as an exploration of hybrid retrieval, graph-based note connectivity, and 
 
 Hybrid outperforms BM25-only by **+16% MRR** and **+34% Recall@10**.
 
-Eval set built by sampling notes from the live corpus and generating queries with Claude, then manually verifying ground truth. Initial 10-query set showed BM25 > hybrid — expanding to 50 queries revealed this was sampling noise.
+Eval set built by sampling notes from the live corpus and generating queries with Claude, then manually verifying ground truth.
 
 ### Answer quality — LLM-as-judge (Claude Sonnet scoring Claude Haiku, 15 queries)
 

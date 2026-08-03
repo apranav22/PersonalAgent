@@ -25,10 +25,10 @@ import sys
 import tempfile
 from pathlib import Path
 
-AGENT_DIR  = Path(__file__).parent
-NOTES_DIR  = AGENT_DIR / "notes_md"
+AGENT_DIR = Path(__file__).parent
+NOTES_DIR = AGENT_DIR / "notes_md"
 INDEX_FILE = NOTES_DIR / "_index.json"
-OCR_TOOL   = AGENT_DIR / "ocr_tool"
+OCR_TOOL = AGENT_DIR / "ocr_tool"
 
 EXPORT_DIR = Path("~/Desktop/notes_export").expanduser()
 if not EXPORT_DIR.exists():
@@ -37,7 +37,7 @@ if not EXPORT_DIR.exists():
 
 def extract_images(html: str) -> list[bytes]:
     """Pull all base64-encoded images out of an HTML string."""
-    pattern = r'data:image/[^;]+;base64,([A-Za-z0-9+/=]+)'
+    pattern = r"data:image/[^;]+;base64,([A-Za-z0-9+/=]+)"
     images = []
     for match in re.finditer(pattern, html):
         try:
@@ -50,13 +50,12 @@ def extract_images(html: str) -> list[bytes]:
 def ocr_image(image_bytes: bytes) -> str:
     """Run ocr_tool on raw image bytes, return recognized text."""
     with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
-        f.write(image_bytes)
         tmp_path = f.name
+        f.write(image_bytes)
 
     try:
         result = subprocess.run(
-            [str(OCR_TOOL), tmp_path],
-            capture_output=True, text=True, timeout=30
+            [str(OCR_TOOL), tmp_path], capture_output=True, text=True, timeout=30
         )
         if result.returncode != 0:
             raise RuntimeError(f"ocr_tool exited {result.returncode}: {result.stderr}")
@@ -117,7 +116,9 @@ def main():
 
     if not OCR_TOOL.exists():
         print(f"ocr_tool binary not found at {OCR_TOOL}")
-        print("Run: swiftc -O ocr_tool.swift -o ocr_tool -framework Vision -framework AppKit")
+        print(
+            "Run: swiftc -O ocr_tool.swift -o ocr_tool -framework Vision -framework AppKit"
+        )
         sys.exit(1)
 
     if not INDEX_FILE.exists():
@@ -138,7 +139,7 @@ def main():
     done, skipped, failed = 0, 0, 0
     for entry in entries:
         note_id = entry["id"]
-        title   = entry["title"]
+        title = entry["title"]
         md_path = Path(entry["path"])
 
         try:

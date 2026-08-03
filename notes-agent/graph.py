@@ -26,13 +26,13 @@ import numpy as np
 
 warnings.filterwarnings("ignore")
 
-AGENT_DIR     = Path(__file__).parent
-DB_DIR        = AGENT_DIR / "lancedb"
-TABLE_NAME    = "notes_chunks"
-GRAPH_FILE    = AGENT_DIR / "graph.json"
+AGENT_DIR = Path(__file__).parent
+DB_DIR = AGENT_DIR / "lancedb"
+TABLE_NAME = "notes_chunks"
+GRAPH_FILE = AGENT_DIR / "graph.json"
 
-SIM_THRESHOLD = 0.40   # minimum cosine similarity to create an edge
-MAX_NEIGHBORS = 10     # max edges stored per note
+SIM_THRESHOLD = 0.40  # minimum cosine similarity to create an edge
+MAX_NEIGHBORS = 10  # max edges stored per note
 
 
 # ── Embedding helpers ─────────────────────────────────────────────────────
@@ -46,10 +46,10 @@ def load_note_embeddings() -> dict[str, np.ndarray]:
     if TABLE_NAME not in db.table_names():
         raise RuntimeError(f"Table '{TABLE_NAME}' not found — run embed.py first.")
 
-    tbl   = db.open_table(TABLE_NAME)
+    tbl = db.open_table(TABLE_NAME)
     arrow = tbl.to_arrow()
     note_ids = arrow.column("note_id").to_pylist()
-    vectors  = arrow.column("vector").to_pylist()
+    vectors = arrow.column("vector").to_pylist()
 
     note_vecs: dict[str, list[np.ndarray]] = {}
     for nid, vec in zip(note_ids, vectors):
@@ -73,7 +73,7 @@ def build_edges(
 
     Returns { note_id: [{note_id, weight}, ...] }
     """
-    all_ids  = list(all_embeddings.keys())
+    all_ids = list(all_embeddings.keys())
     all_vecs = np.stack([all_embeddings[nid] for nid in all_ids])  # (N, D)
 
     # Pre-normalise corpus for cosine via dot product
@@ -87,14 +87,14 @@ def build_edges(
         if nid not in all_embeddings:
             continue
 
-        vec  = all_embeddings[nid]
+        vec = all_embeddings[nid]
         norm = np.linalg.norm(vec)
         if norm == 0:
             edges[nid] = []
             continue
 
-        sims  = norm_vecs @ (vec / norm)  # (N,) — all cosine sims at once
-        order = np.argsort(sims)[::-1]    # descending
+        sims = norm_vecs @ (vec / norm)  # (N,) — all cosine sims at once
+        order = np.argsort(sims)[::-1]  # descending
 
         neighbors: list[dict] = []
         for idx in order:
@@ -135,7 +135,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--changed", nargs="*", help="Note IDs to recompute edges for")
     parser.add_argument("--deleted", nargs="*", help="Note IDs to remove from graph")
-    parser.add_argument("--all",     action="store_true", help="Full graph rebuild")
+    parser.add_argument("--all", action="store_true", help="Full graph rebuild")
     args = parser.parse_args()
 
     print("Loading note embeddings from lancedb...")
@@ -145,7 +145,7 @@ def main():
     graph = load_graph()
 
     # Remove deleted nodes
-    for nid in (args.deleted or []):
+    for nid in args.deleted or []:
         if graph.pop(nid, None) is not None:
             print(f"  Removed node: {nid}")
 

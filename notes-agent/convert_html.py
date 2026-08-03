@@ -13,7 +13,6 @@ import json
 import os
 import re
 import sys
-import tempfile
 from pathlib import Path
 
 try:
@@ -25,9 +24,9 @@ except ImportError:
 
 from utils import load_manifest
 
-AGENT_DIR  = Path(__file__).parent
+AGENT_DIR = Path(__file__).parent
 EXPORT_DIR = Path("~/Desktop/notes_export").expanduser()
-OUT_DIR    = AGENT_DIR / "notes_md"
+OUT_DIR = AGENT_DIR / "notes_md"
 
 # Fallback to sibling notes_export if Desktop one doesn't exist (dev convenience)
 if not EXPORT_DIR.exists():
@@ -37,10 +36,10 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- html2text config ---
 h = html2text.HTML2Text()
-h.ignore_links   = False
-h.ignore_images  = True
-h.body_width     = 0        # don't hard-wrap lines
-h.ul_item_mark   = "-"
+h.ignore_links = False
+h.ignore_images = True
+h.body_width = 0  # don't hard-wrap lines
+h.ul_item_mark = "-"
 
 
 def html_to_md(html: str) -> str:
@@ -60,7 +59,6 @@ def html_to_md(html: str) -> str:
     return md.strip()
 
 
-
 def sanity_check(note_id: str, title: str, md: str, html: str) -> list[str]:
     warnings = []
     if len(md) == 0:
@@ -73,7 +71,7 @@ def sanity_check(note_id: str, title: str, md: str, html: str) -> list[str]:
     # Garbled: high ratio of non-ASCII could indicate encoding issues
     non_ascii = sum(1 for c in md if ord(c) > 127)
     if len(md) > 50 and non_ascii / len(md) > 0.3:
-        warnings.append(f"HIGH_NON_ASCII ({non_ascii/len(md):.0%})")
+        warnings.append(f"HIGH_NON_ASCII ({non_ascii / len(md):.0%})")
     return warnings
 
 
@@ -88,7 +86,7 @@ def main():
     issues = []
 
     for note_id, meta in manifest.items():
-        title       = meta["title"]
+        title = meta["title"]
         modified_at = meta["modified_at"]
 
         html_path = EXPORT_DIR / f"{note_id}.html"
@@ -97,14 +95,14 @@ def main():
             continue
 
         html = html_path.read_text(encoding="utf-8", errors="replace")
-        md   = html_to_md(html)
+        md = html_to_md(html)
 
         warns = sanity_check(note_id, title, md, html)
         if warns:
             issues.append((note_id, title, warns))
 
         # Always use manifest title as H1, stripping any H1 from html2text
-        if md.startswith("#"):
+        if md.startswith("# "):
             parts = md.split("\n", 1)
             md = parts[1].lstrip("\n") if len(parts) > 1 else ""
         md = f"# {title}\n\n{md}" if md else f"# {title}"
@@ -112,13 +110,15 @@ def main():
         out_path = OUT_DIR / f"{note_id}.md"
         out_path.write_text(md, encoding="utf-8")
 
-        index.append({
-            "id":          note_id,
-            "title":       title,
-            "modified_at": modified_at,
-            "path":        str(out_path),
-            "char_count":  len(md),
-        })
+        index.append(
+            {
+                "id": note_id,
+                "title": title,
+                "modified_at": modified_at,
+                "path": str(out_path),
+                "char_count": len(md),
+            }
+        )
 
     # Write index atomically to avoid partial writes on crash
     index_path = OUT_DIR / "_index.json"

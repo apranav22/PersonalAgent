@@ -64,6 +64,7 @@ class Timer:
 def bench_chunk_load(runs: int) -> list[float]:
     """Cold chunk load (clears cache each run)."""
     import retrieve as r
+
     times = []
     for _ in range(runs):
         r._chunks_cache = []
@@ -76,6 +77,7 @@ def bench_chunk_load(runs: int) -> list[float]:
 
 def bench_bm25(query: str, runs: int) -> list[float]:
     from retrieve import load_all_chunks, bm25_search
+
     chunks = load_all_chunks()
     times = []
     for _ in range(runs):
@@ -87,6 +89,7 @@ def bench_bm25(query: str, runs: int) -> list[float]:
 
 def bench_embed_query(query: str, runs: int) -> list[float]:
     from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer("all-MiniLM-L6-v2")
     times = []
     for _ in range(runs):
@@ -99,6 +102,7 @@ def bench_embed_query(query: str, runs: int) -> list[float]:
 def bench_vector_search(query: str, runs: int) -> list[float]:
     import lancedb
     from sentence_transformers import SentenceTransformer
+
     model = SentenceTransformer("all-MiniLM-L6-v2")
     vec = model.encode(query).tolist()
     db = lancedb.connect(str(AGENT_DIR / "lancedb"))
@@ -113,9 +117,10 @@ def bench_vector_search(query: str, runs: int) -> list[float]:
 
 def bench_rrf(query: str, runs: int) -> list[float]:
     from retrieve import load_all_chunks, bm25_search, semantic_search, rrf_fuse
+
     chunks = load_all_chunks()
     bm25_res = bm25_search(query, chunks, top_k=10)
-    sem_res  = semantic_search(query, top_k=10)
+    sem_res = semantic_search(query, top_k=10)
     times = []
     for _ in range(runs):
         with Timer() as t:
@@ -126,6 +131,7 @@ def bench_rrf(query: str, runs: int) -> list[float]:
 
 def bench_graph_expand(query: str, runs: int) -> list[float]:
     from retrieve import load_all_chunks, retrieve, graph_expand
+
     chunks = load_all_chunks()
     results = retrieve(query, top_k=5, expand_graph=False)
     times = []
@@ -139,6 +145,7 @@ def bench_graph_expand(query: str, runs: int) -> list[float]:
 def bench_full_retrieve(query: str, runs: int) -> list[float]:
     """End-to-end retrieve() with warm cache."""
     from retrieve import retrieve
+
     retrieve(query, top_k=5)  # warm-up
     times = []
     for _ in range(runs):
@@ -174,12 +181,16 @@ def print_row(label: str, samples: list[float], note: str = ""):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--runs",  type=int, default=5,  help="Runs per query (default 5)")
-    parser.add_argument("--cold",  action="store_true",  help="Include cold-start measurement")
+    parser.add_argument(
+        "--runs", type=int, default=5, help="Runs per query (default 5)"
+    )
+    parser.add_argument(
+        "--cold", action="store_true", help="Include cold-start measurement"
+    )
     args = parser.parse_args()
 
     queries = DEFAULT_QUERIES
-    runs    = args.runs
+    runs = args.runs
 
     print(f"\nLatency profile — {len(queries)} queries × {runs} runs each")
     print("=" * 60)
@@ -196,31 +207,31 @@ def main():
     all_bm25, all_embed, all_vec, all_rrf, all_graph, all_full = [], [], [], [], [], []
 
     for q in queries:
-        all_bm25  .extend(bench_bm25(q, runs))
-        all_embed .extend(bench_embed_query(q, runs))
-        all_vec   .extend(bench_vector_search(q, runs))
-        all_rrf   .extend(bench_rrf(q, runs))
-        all_graph .extend(bench_graph_expand(q, runs))
-        all_full  .extend(bench_full_retrieve(q, runs))
+        all_bm25.extend(bench_bm25(q, runs))
+        all_embed.extend(bench_embed_query(q, runs))
+        all_vec.extend(bench_vector_search(q, runs))
+        all_rrf.extend(bench_rrf(q, runs))
+        all_graph.extend(bench_graph_expand(q, runs))
+        all_full.extend(bench_full_retrieve(q, runs))
 
-    print_row("bm25",          all_bm25,  note="keyword search over chunks.jsonl")
-    print_row("embed_query",   all_embed, note="encode query → 384-dim vector")
-    print_row("vector_search", all_vec,   note="LanceDB ANN search")
-    print_row("rrf_fuse",      all_rrf,   note="merge BM25 + semantic rankings")
-    print_row("graph_expand",  all_graph, note="1-hop neighbour expansion")
-    print_row("full retrieve", all_full,  note="end-to-end (BM25+vec+RRF+graph)")
+    print_row("bm25", all_bm25, note="keyword search over chunks.jsonl")
+    print_row("embed_query", all_embed, note="encode query → 384-dim vector")
+    print_row("vector_search", all_vec, note="LanceDB ANN search")
+    print_row("rrf_fuse", all_rrf, note="merge BM25 + semantic rankings")
+    print_row("graph_expand", all_graph, note="1-hop neighbour expansion")
+    print_row("full retrieve", all_full, note="end-to-end (BM25+vec+RRF+graph)")
 
     # ── Breakdown ─────────────────────────────────────────────────
     full_med = summarise(all_full)[0]
-    vec_med  = summarise(all_vec)[0]
-    emb_med  = summarise(all_embed)[0]
+    vec_med = summarise(all_vec)[0]
+    emb_med = summarise(all_embed)[0]
     bm25_med = summarise(all_bm25)[0]
 
-    print(f"\nBottleneck breakdown (% of full retrieve median):")
+    print("\nBottleneck breakdown (% of full retrieve median):")
     for label, t in [
-        ("embed_query",   emb_med),
+        ("embed_query", emb_med),
         ("vector_search", vec_med),
-        ("bm25",          bm25_med),
+        ("bm25", bm25_med),
     ]:
         pct = (t / full_med * 100) if full_med > 0 else 0
         print(f"  {label:<18}  {pct:.0f}%")
@@ -228,15 +239,33 @@ def main():
     # ── Save ──────────────────────────────────────────────────────
     results = {
         "runs_per_query": runs,
-        "queries":        len(queries),
+        "queries": len(queries),
         "stages": {
-            "bm25":          {"median_ms": round(summarise(all_bm25)[0], 2),  "p95_ms": round(summarise(all_bm25)[1], 2)},
-            "embed_query":   {"median_ms": round(summarise(all_embed)[0], 2), "p95_ms": round(summarise(all_embed)[1], 2)},
-            "vector_search": {"median_ms": round(summarise(all_vec)[0], 2),   "p95_ms": round(summarise(all_vec)[1], 2)},
-            "rrf_fuse":      {"median_ms": round(summarise(all_rrf)[0], 2),   "p95_ms": round(summarise(all_rrf)[1], 2)},
-            "graph_expand":  {"median_ms": round(summarise(all_graph)[0], 2), "p95_ms": round(summarise(all_graph)[1], 2)},
-            "full_retrieve": {"median_ms": round(summarise(all_full)[0], 2),  "p95_ms": round(summarise(all_full)[1], 2)},
-        }
+            "bm25": {
+                "median_ms": round(summarise(all_bm25)[0], 2),
+                "p95_ms": round(summarise(all_bm25)[1], 2),
+            },
+            "embed_query": {
+                "median_ms": round(summarise(all_embed)[0], 2),
+                "p95_ms": round(summarise(all_embed)[1], 2),
+            },
+            "vector_search": {
+                "median_ms": round(summarise(all_vec)[0], 2),
+                "p95_ms": round(summarise(all_vec)[1], 2),
+            },
+            "rrf_fuse": {
+                "median_ms": round(summarise(all_rrf)[0], 2),
+                "p95_ms": round(summarise(all_rrf)[1], 2),
+            },
+            "graph_expand": {
+                "median_ms": round(summarise(all_graph)[0], 2),
+                "p95_ms": round(summarise(all_graph)[1], 2),
+            },
+            "full_retrieve": {
+                "median_ms": round(summarise(all_full)[0], 2),
+                "p95_ms": round(summarise(all_full)[1], 2),
+            },
+        },
     }
     out = AGENT_DIR / "profile_results.json"
     out.write_text(json.dumps(results, indent=2))

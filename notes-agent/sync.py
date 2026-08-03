@@ -24,8 +24,8 @@ from pathlib import Path
 
 from utils import load_manifest
 
-AGENT_DIR   = Path(__file__).parent
-EXPORT_DIR  = Path("~/Desktop/notes_export").expanduser()
+AGENT_DIR = Path(__file__).parent
+EXPORT_DIR = Path("~/Desktop/notes_export").expanduser()
 HASHES_FILE = AGENT_DIR / "_hashes.json"
 
 # Fallback to sibling notes_export if Desktop one doesn't exist (dev convenience)
@@ -86,8 +86,12 @@ def get_diff(dry_run: bool = False) -> tuple[list[str], list[str]]:
 
 def main():
     parser = argparse.ArgumentParser(description="Incremental notes sync")
-    parser.add_argument("--dry-run", action="store_true", help="Print diff without writing hashes")
-    parser.add_argument("--json",    action="store_true", help="Output as JSON for pipeline use")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print diff without writing hashes"
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Output as JSON for pipeline use"
+    )
     args = parser.parse_args()
 
     changed, deleted = get_diff(dry_run=args.dry_run)

@@ -38,14 +38,16 @@ from pathlib import Path
 
 warnings.filterwarnings("ignore")
 
-AGENT_DIR    = Path(__file__).parent
+AGENT_DIR = Path(__file__).parent
 QUERIES_FILE = AGENT_DIR / "eval_queries.json"
 
 
 # ── Retrieval strategies ───────────────────────────────────────────────────
 
+
 def retrieve_bm25(query: str, top_k: int) -> list:
     from retrieve import load_all_chunks, bm25_search
+
     chunks = load_all_chunks()
     results = bm25_search(query, chunks, top_k)
     return [chunk["note_id"] for chunk, _ in results]
@@ -53,31 +55,35 @@ def retrieve_bm25(query: str, top_k: int) -> list:
 
 def retrieve_semantic(query: str, top_k: int) -> list:
     from retrieve import semantic_search
+
     results = semantic_search(query, top_k)
     return [chunk["note_id"] for chunk, _ in results]
 
 
 def retrieve_hybrid(query: str, top_k: int) -> list:
     from retrieve import retrieve
+
     results = retrieve(query, top_k=top_k, expand_graph=False)
     return [chunk["note_id"] for chunk, _ in results]
 
 
 def retrieve_hybrid_graph(query: str, top_k: int) -> list:
     from retrieve import retrieve
+
     results = retrieve(query, top_k=top_k, expand_graph=True)
     return [chunk["note_id"] for chunk, _ in results]
 
 
 STRATEGIES = {
-    "bm25":         retrieve_bm25,
-    "semantic":     retrieve_semantic,
-    "hybrid":       retrieve_hybrid,
+    "bm25": retrieve_bm25,
+    "semantic": retrieve_semantic,
+    "hybrid": retrieve_hybrid,
     "hybrid+graph": retrieve_hybrid_graph,
 }
 
 
 # ── Metrics ────────────────────────────────────────────────────────────────
+
 
 def precision_at_k(retrieved: list, relevant: set, k: int) -> float:
     retrieved_k = retrieved[:k]
@@ -106,8 +112,9 @@ def ndcg_at_k(retrieved: list, relevant: set, k: int) -> float:
             (1 if nid in relevant else 0) / math.log2(i + 2)
             for i, nid in enumerate(items[:k])
         )
+
     ideal_relevant = list(relevant)[:k]
-    ideal_padding  = ["_"] * max(0, k - len(ideal_relevant))
+    ideal_padding = ["_"] * max(0, k - len(ideal_relevant))
     ideal = ideal_relevant + ideal_padding
     idcg = dcg(ideal)
     return dcg(retrieved) / idcg if idcg > 0 else 0.0
@@ -115,21 +122,22 @@ def ndcg_at_k(retrieved: list, relevant: set, k: int) -> float:
 
 def score_query(retrieved: list, relevant: set, k: int) -> dict:
     return {
-        f"P@{k}":   precision_at_k(retrieved, relevant, k),
-        f"R@{k}":   recall_at_k(retrieved, relevant, k),
-        "MRR":      mrr(retrieved, relevant),
+        f"P@{k}": precision_at_k(retrieved, relevant, k),
+        f"R@{k}": recall_at_k(retrieved, relevant, k),
+        "MRR": mrr(retrieved, relevant),
         f"nDCG@{k}": ndcg_at_k(retrieved, relevant, k),
     }
 
 
 # ── Main eval loop ─────────────────────────────────────────────────────────
 
+
 def run_eval(queries: list, strategy_name: str, k: int) -> dict:
     fn = STRATEGIES[strategy_name]
     all_scores = []
 
     for q in queries:
-        query    = q["query"]
+        query = q["query"]
         relevant = set(q["relevant_note_ids"])
         try:
             retrieved = fn(query, top_k=k)
@@ -149,7 +157,7 @@ def run_eval(queries: list, strategy_name: str, k: int) -> dict:
 
 def print_results(results: dict, k: int) -> None:
     strategies = list(results.keys())
-    metrics    = list(next(iter(results.values())).keys()) if results else []
+    metrics = list(next(iter(results.values())).keys()) if results else []
 
     col_w = 12
     header = f"{'Strategy':<12}" + "".join(f"{m:>{col_w}}" for m in metrics)
@@ -164,19 +172,32 @@ def print_results(results: dict, k: int) -> None:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--strategy", choices=list(STRATEGIES), default=None,
-                        help="Run one strategy only (default: all)")
-    parser.add_argument("--k",        type=int, default=5,
-                        help="Evaluate at top-k (default: 5)")
-    parser.add_argument("--queries",  type=str, default=str(QUERIES_FILE),
-                        help="Path to eval_queries.json")
+    parser.add_argument(
+        "--strategy",
+        choices=list(STRATEGIES),
+        default=None,
+        help="Run one strategy only (default: all)",
+    )
+    parser.add_argument(
+        "--k", type=int, default=5, help="Evaluate at top-k (default: 5)"
+    )
+    parser.add_argument(
+        "--queries",
+        type=str,
+        default=str(QUERIES_FILE),
+        help="Path to eval_queries.json",
+    )
     args = parser.parse_args()
 
     queries_path = Path(args.queries)
     if not queries_path.exists():
+        demo = AGENT_DIR / "eval_queries_demo.json"
         print(f"Query file not found: {queries_path}")
-        print("Create eval_queries.json with format:")
-        print('[{"query": "...", "relevant_note_ids": ["note_1", "note_2"]}, ...]')
+        if demo.exists():
+            print(f"Tip: use the demo query set with --queries {demo}")
+        else:
+            print("Create eval_queries.json with format:")
+            print('[{"query": "...", "relevant_note_ids": ["note_1", "note_2"]}, ...]')
         sys.exit(1)
 
     queries = json.loads(queries_path.read_text(encoding="utf-8"))

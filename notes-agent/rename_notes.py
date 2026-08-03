@@ -13,8 +13,8 @@ from pathlib import Path
 
 from utils import load_manifest as _load_manifest
 
-AGENT_DIR  = Path(__file__).parent
-NOTES_DIR  = AGENT_DIR / "notes_md"
+AGENT_DIR = Path(__file__).parent
+NOTES_DIR = AGENT_DIR / "notes_md"
 INDEX_FILE = NOTES_DIR / "_index.json"
 
 EXPORT_DIR = Path("~/Desktop/notes_export").expanduser()
@@ -26,11 +26,11 @@ MANIFEST = EXPORT_DIR / "manifest.txt"
 
 def slugify(title: str) -> str:
     s = title.lower().strip()
-    s = re.sub(r"[^\w\s-]", "", s)       # remove punctuation except - and _
-    s = re.sub(r"[\s_]+", "_", s)         # spaces → underscore
+    s = re.sub(r"[^\w\s-]", "", s)  # remove punctuation except - and _
+    s = re.sub(r"[\s_]+", "_", s)  # spaces → underscore
     s = re.sub(r"-+", "-", s)
     s = s.strip("_-")
-    return s[:80] or "untitled"           # cap length
+    return s[:80] or "untitled"  # cap length
 
 
 def load_manifest() -> dict[str, str]:
@@ -52,8 +52,8 @@ def main():
 
     for entry in index:
         note_id = entry["id"]
-        title   = manifest.get(note_id, note_id)
-        slug    = slugify(title)
+        title = manifest.get(note_id, note_id)
+        slug = slugify(title)
 
         # Collision: append note_id to disambiguate
         if slug in seen_slugs:
@@ -86,9 +86,11 @@ def main():
 
         entry["path"] = str(new_path)
 
-    INDEX_FILE.write_text(json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8")
+    INDEX_FILE.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"Renamed {renames} files → {NOTES_DIR}")
-    print(f"_index.json updated")
+    print("_index.json updated")
 
 
 if __name__ == "__main__":

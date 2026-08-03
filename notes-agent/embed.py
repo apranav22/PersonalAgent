@@ -16,40 +16,43 @@ Each row in the table mirrors a chunk from chunks.jsonl + its vector.
 
 import argparse
 import json
-import sys
 import warnings
 from pathlib import Path
 from typing import Optional
 
 warnings.filterwarnings("ignore")  # suppress urllib3/ssl noise
 
-AGENT_DIR   = Path(__file__).parent
+AGENT_DIR = Path(__file__).parent
 CHUNKS_FILE = AGENT_DIR / "chunks.jsonl"
-DB_DIR      = AGENT_DIR / "lancedb"
+DB_DIR = AGENT_DIR / "lancedb"
 
-MODEL_NAME  = "all-MiniLM-L6-v2"
-TABLE_NAME  = "notes_chunks"
+MODEL_NAME = "all-MiniLM-L6-v2"
+TABLE_NAME = "notes_chunks"
 
 
 def load_model():
     from sentence_transformers import SentenceTransformer
+
     print(f"Loading embedding model ({MODEL_NAME})...")
     return SentenceTransformer(MODEL_NAME)
 
 
 def get_or_create_table(db, dim: int):
     import pyarrow as pa
-    schema = pa.schema([
-        pa.field("note_id",      pa.utf8()),
-        pa.field("title",        pa.utf8()),
-        pa.field("modified_at",  pa.int64()),
-        pa.field("source_path",  pa.utf8()),
-        pa.field("chunk_index",  pa.int32()),
-        pa.field("chunk_total",  pa.int32()),
-        pa.field("tokens_approx",pa.int32()),
-        pa.field("text",         pa.utf8()),
-        pa.field("vector",       pa.list_(pa.float32(), dim)),
-    ])
+
+    schema = pa.schema(
+        [
+            pa.field("note_id", pa.utf8()),
+            pa.field("title", pa.utf8()),
+            pa.field("modified_at", pa.int64()),
+            pa.field("source_path", pa.utf8()),
+            pa.field("chunk_index", pa.int32()),
+            pa.field("chunk_total", pa.int32()),
+            pa.field("tokens_approx", pa.int32()),
+            pa.field("text", pa.utf8()),
+            pa.field("vector", pa.list_(pa.float32(), dim)),
+        ]
+    )
     if TABLE_NAME in db.table_names():
         table = db.open_table(TABLE_NAME)
         # Validate dimension matches current model
@@ -86,26 +89,29 @@ def embed_and_upsert(table, chunks: list[dict], model) -> int:
     print(f"Embedding {len(chunks)} chunks...")
     vectors = model.encode(texts, show_progress_bar=True, batch_size=32)
 
-    import pyarrow as pa
+
     rows = []
     for chunk, vec in zip(chunks, vectors):
-        rows.append({
-            "note_id":       chunk["note_id"],
-            "title":         chunk["title"],
-            "modified_at":   int(chunk.get("modified_at") or 0),
-            "source_path":   chunk["source_path"],
-            "chunk_index":   chunk["chunk_index"],
-            "chunk_total":   chunk["chunk_total"],
-            "tokens_approx": chunk["tokens_approx"],
-            "text":          chunk["text"],
-            "vector":        vec.tolist(),
-        })
+        rows.append(
+            {
+                "note_id": chunk["note_id"],
+                "title": chunk["title"],
+                "modified_at": int(chunk.get("modified_at") or 0),
+                "source_path": chunk["source_path"],
+                "chunk_index": chunk["chunk_index"],
+                "chunk_total": chunk["chunk_total"],
+                "tokens_approx": chunk["tokens_approx"],
+                "text": chunk["text"],
+                "vector": vec.tolist(),
+            }
+        )
 
     # Delete existing rows for these notes before inserting updated ones
     note_ids = list({c["note_id"] for c in chunks})
     for nid in note_ids:
         try:
-            table.delete(f"note_id = '{nid}'")
+            safe_nid = nid.replace("'", "''")
+            table.delete(f"note_id = '{safe_nid}'")
         except Exception as e:
             if "empty" not in str(e).lower() and "no such" not in str(e).lower():
                 print(f"  WARN: delete failed for {nid}: {e}")
@@ -119,7 +125,8 @@ def delete_notes(table, note_ids: list[str]) -> None:
         return
     for nid in note_ids:
         try:
-            table.delete(f"note_id = '{nid}'")
+            safe_nid = nid.replace("'", "''")
+            table.delete(f"note_id = '{safe_nid}'")
         except Exception as e:
             if "empty" not in str(e).lower() and "no such" not in str(e).lower():
                 print(f"  WARN: delete failed for {nid}: {e}")
@@ -130,10 +137,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--changed", nargs="*", help="Note IDs to re-embed")
     parser.add_argument("--deleted", nargs="*", help="Note IDs to remove")
-    parser.add_argument("--all",     action="store_true", help="Re-embed everything")
+    parser.add_argument("--all", action="store_true", help="Re-embed everything")
     args = parser.parse_args()
 
     import lancedb
+
     DB_DIR.mkdir(exist_ok=True)
     db = lancedb.connect(str(DB_DIR))
 
@@ -150,7 +158,7 @@ def main():
         return
 
     model = load_model()
-    dim   = model.get_sentence_embedding_dimension()
+    dim = model.get_sentence_embedding_dimension()
     table = get_or_create_table(db, dim)
 
     if args.deleted:
