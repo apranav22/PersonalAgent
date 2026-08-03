@@ -1,0 +1,30 @@
+{
+  "runs_per_query": 5,
+  "queries": 5,
+  "stages": {
+    "bm25": {
+      "median_ms": 3.8,
+      "p95_ms": 5.6
+    },
+    "embed_query": {
+      "median_ms": 9.58,
+      "p95_ms": 31.79
+    },
+    "vector_search": {
+      "median_ms": 2.49,
+      "p95_ms": 4.24
+    },
+    "rrf_fuse": {
+      "median_ms": 0.01,
+      "p95_ms": 0.03
+    },
+    "graph_expand": {
+      "median_ms": 0.02,
+      "p95_ms": 0.05
+    },
+    "full_retrieve": {
+      "median_ms": 16.91,
+      "p95_ms": 20.89
+    }
+  }
+}

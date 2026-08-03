@@ -1,0 +1,22 @@
+[
+  {
+    "query": "what are my project ideas?",
+    "relevant_note_ids": ["demo_p1", "demo_p2"]
+  },
+  {
+    "query": "what do I want to learn this year?",
+    "relevant_note_ids": ["demo_p3"]
+  },
+  {
+    "query": "what are my daily habits and non-negotiables?",
+    "relevant_note_ids": ["demo_p4", "demo_p5"]
+  },
+  {
+    "query": "what stresses me out most?",
+    "relevant_note_ids": ["demo_p6"]
+  },
+  {
+    "query": "what books do I want to read?",
+    "relevant_note_ids": ["demo_p7"]
+  }
+]
