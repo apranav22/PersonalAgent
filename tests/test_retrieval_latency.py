@@ -7,6 +7,7 @@ under a generous budget. Downloads the ~90MB model on first run (cached in CI).
 """
 
 import json
+import os
 import statistics
 import time
 
@@ -100,6 +101,10 @@ def test_warm_retrieval_latency_budget(index):
 
     median = statistics.median(samples)
     p95 = sorted(samples)[int(0.95 * len(samples)) - 1]
-    print(f"\nwarm retrieve over {n_chunks} chunks: median={median:.1f}ms "
-          f"p95={p95:.1f}ms (n={len(samples)})")
+    report = (f"warm retrieve over {n_chunks} chunks: median={median:.1f}ms "
+              f"p95={p95:.1f}ms (n={len(samples)}, budget {WARM_MEDIAN_BUDGET_MS}ms)")
+    print("\n" + report)
+    if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(summary, "a", encoding="utf-8") as f:
+            f.write(f"**Retrieval latency:** {report}\n")
     assert median < WARM_MEDIAN_BUDGET_MS
