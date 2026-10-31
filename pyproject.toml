@@ -1,0 +1,12 @@
+[tool.ruff]
+target-version = "py311"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# Pyflakes + pycodestyle errors (ruff's classic default set), pinned explicitly
+# so newer ruff releases don't silently widen the rule set.
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

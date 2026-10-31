@@ -50,7 +50,7 @@ INDEX_FILE = AGENT_DIR / "notes_md" / "_index.json"
 # Make sure sibling modules (retrieve.py, etc.) are importable
 sys.path.insert(0, str(AGENT_DIR))
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP  # noqa: E402  (needs sys.path set above)
 
 mcp = FastMCP(
     "personal-notes",

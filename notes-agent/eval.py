@@ -156,7 +156,6 @@ def run_eval(queries: list, strategy_name: str, k: int) -> dict:
 
 
 def print_results(results: dict, k: int) -> None:
-    strategies = list(results.keys())
     metrics = list(next(iter(results.values())).keys()) if results else []
 
     col_w = 12

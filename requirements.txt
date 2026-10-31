@@ -1,0 +1,9 @@
+anthropic
+beautifulsoup4
+fastmcp>=3.0
+html2text
+lancedb
+numpy
+pyarrow
+rank-bm25
+sentence-transformers
