@@ -25,7 +25,6 @@ import argparse
 import json
 import random
 import statistics
-import sys
 import warnings
 from pathlib import Path
 
