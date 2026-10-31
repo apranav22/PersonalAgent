@@ -84,7 +84,7 @@ def test_hybrid_retrieval_finds_relevant_note(index):
         assert results[0][0]["title"].startswith(title), (query, results[0][0]["title"])
 
 
-def test_warm_retrieval_latency_budget(index):
+def test_warm_retrieval_latency_budget(index, capsys):
     r, n_chunks = index
     queries = [
         "dough fermentation schedule", "weekly long run plan", "kanji review habit",
@@ -103,7 +103,8 @@ def test_warm_retrieval_latency_budget(index):
     p95 = sorted(samples)[int(0.95 * len(samples)) - 1]
     report = (f"warm retrieve over {n_chunks} chunks: median={median:.1f}ms "
               f"p95={p95:.1f}ms (n={len(samples)}, budget {WARM_MEDIAN_BUDGET_MS}ms)")
-    print("\n" + report)
+    with capsys.disabled():  # show the measurement in the CI log
+        print("\n" + report)
     if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(summary, "a", encoding="utf-8") as f:
             f.write(f"**Retrieval latency:** {report}\n")
